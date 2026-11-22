@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fox Apple Catch</title>
+<style>
+  body { margin: 0; background: #1b2a4a; display: flex; justify-content: center;
+    font-family: Arial, sans-serif; color: #fff; }
+  #wrap { text-align: center; padding: 12px; }
+  canvas { background: #87ceeb; border: 4px solid #ff8c1a; border-radius: 12px;
+    touch-action: none; max-width: 94vw; }
+  h1 { margin: 8px 0 4px; font-size: 26px; }
+  p { margin: 4px 0 10px; color: #ffd9a0; }
+  #hud { font-size: 20px; font-weight: bold; margin-bottom: 8px; }
+  button { font-size: 18px; padding: 8px 18px; border-radius: 8px; border: 0;
+    background: #ff8c1a; color: #fff; cursor: pointer; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>🦊 Fox Apple Catch</h1>
+  <p>Move with ← → or drag. Catch apples, don't drop them!</p>
+  <div id="hud">Score: 0 &nbsp;•&nbsp; Lives: ❤❤❤</div>
+  <canvas id="game" width="480" height="640"></canvas><br>
+  <button id="startBtn">Start game</button>
+</div>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const hud = document.getElementById('hud');
+const W = canvas.width, H = canvas.height;
+let fox = { x: W / 2, y: H - 90, w: 90, h: 64, speed: 9 };
+let apples = [], score = 0, lives = 3, running = false, over = false;
+let keys = {}, spawnTimer = 0, frame = 0;
+
+function spawnApple() {
+  apples.push({ x: 30 + Math.random() * (W - 60), y: -30,
+    r: 20 + Math.random() * 8, vy: 2.6 + Math.random() * 1.8 + score * 0.03 });
+}
+function reset() {
+  apples = []; score = 0; lives = 3; over = false; fox.x = W / 2;
+  updateHud();
+}
+function updateHud() {
+  hud.textContent = 'Score: ' + score + '  •  Lives: ' +
+    '❤'.repeat(Math.max(lives, 0)) + '🤍'.repeat(Math.max(3 - lives, 0));
+  if (over) hud.textContent += '  —  GAME OVER! Score ' + score;
+}
+function drawFox() {
+  const x = fox.x, y = fox.y;
+  ctx.fillStyle = '#ff8c1a';
+  ctx.beginPath(); ctx.ellipse(x, y, 45, 30, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x - 34, y - 18); ctx.lineTo(x - 26, y - 48);
+  ctx.lineTo(x - 10, y - 26); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + 34, y - 18); ctx.lineTo(x + 26, y - 48);
+  ctx.lineTo(x + 10, y - 26); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(x - 16, y - 8, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 16, y - 8, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.arc(x - 16, y - 8, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 16, y - 8, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(x, y + 14, 18, 10, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.arc(x, y + 10, 5, 0, Math.PI * 2); ctx.fill();
+}
+function drawApple(a) {
+  ctx.fillStyle = '#e63946';
+  ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#2a9d3a';
+  ctx.beginPath(); ctx.ellipse(a.x + 8, a.y - a.r - 2, 10, 5, -0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#7a4a21'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(a.x, a.y - a.r); ctx.lineTo(a.x + 4, a.y - a.r - 10); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.beginPath(); ctx.arc(a.x - 7, a.y - 7, 5, 0, Math.PI * 2); ctx.fill();
+}
+function draw() {
+  ctx.fillStyle = '#87ceeb'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#7ec850'; ctx.fillRect(0, H - 40, W, 40);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(90, 90, 55, 22, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(360, 150, 70, 24, 0, 0, Math.PI * 2); ctx.fill();
+  apples.forEach(drawApple);
+  drawFox();
+  if (!running && !over) {
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 30px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('Press Start!', W / 2, H / 2);
+  }
+  if (over) {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 34px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', W / 2, H / 2 - 10);
+    ctx.font = '24px Arial';
+    ctx.fillText('Final score: ' + score, W / 2, H / 2 + 30);
+  }
+}
+function update() {
+  if (!running) return;
+  frame++;
+  if (keys['ArrowLeft'] || keys['a']) fox.x -= fox.speed;
+  if (keys['ArrowRight'] || keys['d']) fox.x += fox.speed;
+  fox.x = Math.max(45, Math.min(W - 45, fox.x));
+  spawnTimer++;
+  if (spawnTimer > 42) { spawnApple(); spawnTimer = 0; }
+  for (let i = apples.length - 1; i >= 0; i--) {
+    const a = apples[i];
+    a.y += a.vy;
+    const caught = Math.abs(a.x - fox.x) < 52 && a.y > fox.y - 34 && a.y < fox.y + 30;
+    if (caught) { score += 10; apples.splice(i, 1); updateHud(); continue; }
+    if (a.y > H - 40) {
+      apples.splice(i, 1); lives--;
+      updateHud();
+      if (lives <= 0) { over = true; running = false; }
+    }
+  }
+}
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+document.getElementById('startBtn').addEventListener('click', () => {
+  reset(); running = true; over = false;
+});
+window.addEventListener('keydown', e => { keys[e.key] = true;
+  if (['ArrowLeft', 'ArrowRight'].includes(e.key)) e.preventDefault(); });
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+canvas.addEventListener('pointermove', e => {
+  const r = canvas.getBoundingClientRect();
+  fox.x = (e.clientX - r.left) / r.width * W;
+});
+reset(); loop();
+</script>
+</body>
+</html>
